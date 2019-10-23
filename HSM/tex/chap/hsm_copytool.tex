@@ -1,0 +1,70 @@
+\section{HSM copytool}
+
+\subsection{copytool结构}
+该结构体如下：
+\begin{lstlisting}[language={c++},numbers=left]
+struct hsm_copytool_private {
+	int				 magic;
+	char				*mnt; // 代指Lustre的mount point
+    struct kuc_hdr			*kuch; // 指向的是-> KUC信息头
+    // 所以当前和未来的KUC信息必须包含在此头内
+    // 目的是为了避免不得不去包含Lustre的libcfs头文件
+	int				 mnt_fd; // mount所对接的文件
+	int				 open_by_fid_fd;
+    struct lustre_kernelcomm	*kuc; // 指向的是-> kernelcomm控制结构
+    // 从用户态到内核态
+    // 内核以存档的位图方式读取lk_data_count
+};
+\end{lstlisting}
+
+
+\subsection{copyaction结构}
+该结构体如下：
+\begin{lstlisting}[language={c++},numbers=left]
+struct hsm_copyaction_private {
+	__u32					 magic;
+	__u32					 source_fd; // 源文件标识符
+	__s32					 data_fd; // 数据标识符
+	const struct hsm_copytool_private	*ct_priv; // 指向copytool的指针
+	struct hsm_copy				 copy;
+	lstat_t					 stat;
+};
+\end{lstlisting}
+
+
+\subsection{注册copytool}
+具体API如下：
+\begin{lstlisting}[language={c++},numbers=left]
+    /*  此API的目的是注册一个copytool
+    若返回值为0说明成功注册，返回值为负则出错 */
+    int llapi_hsm_copytool_register(struct hsm_copytool_private **priv,
+    const char *mnt, int archive_count, int *archives, int rfd_flags);
+    /*API调用方给出一个hsm_copytool_private结构的二重指针priv,
+    一个Lustre的mount point的路径mnt,
+    一个有效归档总数archive_count,
+    一个copytool负责的归档集号码archives,
+    和适用于通道读取文件的标志rfd_flags */
+\end{lstlisting}
+
+\subsection{注销copytool}
+具体API如下：
+\begin{lstlisting}[language={c++},numbers=left]
+    /*  此API的目的是注册一个copytool
+    若返回值为0说明成功注册，返回值为负则出错 */
+    int llapi_hsm_copytool_unregister(struct hsm_copytool_private **priv);
+    // 注销hsm_copytool_private结构的二重指针priv所指向的copytool
+\end{lstlisting}
+
+\subsection{获取copytool的文件标识符}
+具体API如下：
+\begin{lstlisting}[language={c++},numbers=left]
+    /*  此API的目的是获取copytool的文件标识符*/
+    int llapi_hsm_copytool_get_fd(struct hsm_copytool_private *ct);
+    /*  输入一个不透明的 hsm_copytool_private结构的指针ct
+        返回ct->kuc->rfd, 即返回kuc的读取文件标识符 */
+\end{lstlisting}
+
+
+
+
+

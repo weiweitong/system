@@ -1,0 +1,35 @@
+\section{DataMover模块}
+
+DataMover当前需要实现下属三种接口:
+
+\begin{lstlisting}[language={c++},numbers=left]
+    // 将数据从lustre中下沉到冷存储中 
+    func (m *Mover) Archive(action dmplugin.Action) error  
+    // 将数据从冷存储中拷贝到lustre中 
+    func (m *Mover) Restore(action dmplugin.Action) error  
+    // 将数据中冷数据中删除 
+    func (m *Mover) Remove(action dmplugin.Action) error  
+\end{lstlisting}
+
+
+上述函数的参数为Action接口。在Lemur中，Action的实现者是dmAction，其定义如下： 
+\begin{lstlisting}[language={c++},numbers=left]
+    dmAction struct {
+        // 操作执行进度信息的读写channel
+        status chan *pb.ActionStatus    
+        // 由protobuf定义的ActionItem的指针
+        item *pb.ActionItem                 
+        // Action实际需要拷贝数据的长度
+        actualLength *int64                 
+        // lustre xattr属性中uuid属性
+        uuid string                                 
+        // lustre xattr属性中hash属性
+        hash []byte                                 
+        // lustre xattr属性中url属性
+        url string                                 
+    } 
+\end{lstlisting}
+
+其中uuid，url以及hash可以用于唯一标识一个文件的id，或者存储一些用户希望的数据。比如hash值可以用于确认文件内容是否相同，在数据下沉时可以做数据去重。 
+
+Lemur当前实现了posix DataMover以及s3 DataMover。 

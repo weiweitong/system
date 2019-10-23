@@ -1,0 +1,72 @@
+\section{获取HSM状态}
+
+\subsection{HSM状态}
+这个struct是为了显示当前Lustre files状态，描述了当前的HSM状态和进程中的行为。\\
+其结构与成员描述如下：
+\begin{lstlisting}[language={c++},numbers=left]
+	struct hsm_user_state {
+		/* hus_states和hus_archive_id表示当前HSM状态 */
+		// hus状态
+		__u32			hus_states;     
+		// hus归档ID
+		__u32			hus_archive_id; 
+		/*  若当前存在 HSM 行为 
+			则用如下的四个元素：
+			hus_in_progress_state, hus_in_progress_action,
+			hus_in_progress_location和hus_extended_info数组
+			描述该行为
+		*/
+		// hus进程中状态
+		__u32			hus_in_progress_state;  
+		// hus进程中行为
+		__u32			hus_in_progress_action; 
+		// hus进程中位置
+		struct hsm_extent	hus_in_progress_location;   
+		// hus扩展信息
+		char			hus_extended_info[];    
+	};
+\end{lstlisting}
+
+
+\subsection{通过文件标识符获取hsm状态}
+\begin{lstlisting}[language={c++},numbers=left]
+    /*  此API的目的是返回HSM状态和HSM请求
+    API调用方给出一个文件标识符fd
+    和一个hsm_user_state结构的指针hus
+    然后通过hus指针返回该HSM状态。*/
+    int llapi_hsm_state_get_fd(int fd, struct hsm_user_state *hus);
+\end{lstlisting}
+
+若该API返回int值为0则表示操作成功，为负则报错，负值为出错码。
+
+\begin{lstlisting}[language={c++},numbers=left]
+    /* 此API中，主要是调用对I/O通道进行管理的ioctl函数 */
+    rc = ioctl(fd, LL_IOC_HSM_STATE_GET, hus);
+\end{lstlisting}
+
+而传入该ioctl函数中的为文件标识符fd\\和CMD命令LL\_IOC\_HSM\_STATE\_GET，此CMD命令参数为hus
+\begin{lstlisting}[language={c++},numbers=left]
+    #define LL_IOC_HSM_STATE_GET		_IOR('f', 211, struct hsm_user_state)
+    /*  如上的define语句可看出，
+    LL_IOC_HSM_STATE_GET命令实际为IO read命令
+    传入ioctl的参数hus的作用为传回一个HSM状态 */
+\end{lstlisting}
+
+
+\subsection{通过文件路径获取HSM状态}
+
+\begin{lstlisting}[language={c++},numbers=left]
+    /* 此API的目的是返回HSM状态和HSM请求
+    API调用方给出一个文件路径path
+    和一个hsm_user_state结构的指针hus
+    然后通过hus指针返回该HSM状态。 */
+    int llapi_hsm_state_get(const char *path, struct hsm_user_state *hus);
+\end{lstlisting}
+
+而此API的具体实现是：
+\begin{lstlisting}[language={c++},numbers=left]
+    // 先通过路径名获取fd文件标识符 
+    fd = open(path, O_RDONLY | O_NONBLOCK);
+    // 再调用上述的get_fd函数获取hsm状态
+    rc = llapi_hsm_state_get_fd(fd, hus);
+\end{lstlisting}

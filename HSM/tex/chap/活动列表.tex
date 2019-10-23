@@ -1,0 +1,176 @@
+\section{HSM活动列表}
+
+\subsection{接收活动列表}
+
+\begin{lstlisting}[language={c++},numbers=left]
+    /*  
+    此API的目的是让copytool接收活动列表
+    若返回值为0证明执行成功，返回负数则说明接收数据失败 
+    */
+    int llapi_hsm_copytool_recv(struct hsm_copytool_private *priv,
+        struct hsm_action_list **hal, int *msgsize);
+    /* 
+    输入当前的copytool--->ct， 和一个活动表的指针--->hal，
+    以及一个信息的bytes数量---> msgsize.
+    按照bytes数量msgsize读取hal指向的活动表
+    并将其传给priv指向的copytool
+    */
+\end{lstlisting}
+
+\subsection{开始执行hsm活动表}
+
+\begin{lstlisting}[language={c++},numbers=left]
+    /*  
+    此API的目的是让copytool开始执行活动列表
+    此API必须在开始执行请求前，被copytool所调用
+    若copytool仅仅想报一个错，则跳过此程序，跳转到llapi_hsm_action_end()
+    若返回值为0证明执行成功，返回负数则说明执行失败 
+    */
+    int llapi_hsm_action_begin(struct hsm_copyaction_private **phcp,
+        const struct hsm_copytool_private *ct,const struct hsm_action_item *hai,
+        int restore_mdt_index, int restore_open_flags,bool is_error);
+    /* 
+    通过hcp的选择，该操作跳到llapi_hsm_action_progress() 和 llapi_hsm_action_end()
+    ct指向copytool注册所需的hsm私有结构
+    hai描述当前请求
+    restore_mdt_index: 用于创建易变文件的MDT index，使用-1为默认值
+    restore_open_flags: 易变文件创建模式
+    is_error: 此次调用是否是仅仅为了返回一个错误
+    */
+\end{lstlisting}
+
+
+\subsection{终止HSM活动表}
+具体API如下：
+\begin{lstlisting}[language={c++},numbers=left]
+    /*  
+    此API的目的是终止一个HSM活动进程
+    该API只有在copytool终止处理所有请求后，才可被调用
+    若返回值为0证明成功终止HSM活动进程，返回负数则说明终止进程失败 
+    */
+    int llapi_hsm_action_end(struct hsm_copyaction_private **phcp,
+        const struct hsm_extent *he, int hp_flags, int errval);
+    /*  
+    he： 被复制数据最终的范围
+    errval: 操作的状态码
+    hp_flags: 终止状态的标志位
+    */
+\end{lstlisting}
+
+\subsection{通知HSM进程}
+具体API如下：
+\begin{lstlisting}[language={c++},numbers=left]
+    /* 
+    此API的目的是在处理一个HSM行为时，通知一个进程
+    若返回值为0证明成功，返回负数则说明失败 
+    */
+    int llapi_hsm_action_progress(struct hsm_copyaction_private *hcp,
+        const struct hsm_extent *he, __u64 total, int hp_flags);
+    /* 
+    hcp 指向的是当前的复制行为
+    he： 被复制数据的范围
+    total: 所需全部复制数据
+    hp_flags: HSM进程标志位
+    */
+\end{lstlisting}
+
+\newpage
+\subsection{获取被复制对象的文件标识符}
+具体API如下：
+\begin{lstlisting}[language={c++},numbers=left]
+    /*
+    此API的目的是获取被复制对象的文件标识符
+    该文件标识符是通过传入的指针fid返回
+    返回0如果操作成功，返回错误码如果此行为不是一个复制行为
+    */
+    int llapi_hsm_action_get_dfid(const struct hsm_copyaction_private *hcp, struct lu_fid *fid);
+    /*
+    hcp 为复制行为的指针
+    fid为传入的指针，用于返回被复制对象的文件标识符
+    */
+\end{lstlisting}
+该API会创建一个HSM活动项目：
+\begin{lstlisting}[language={c++},numbers=left]
+    /* 该结构是为了描述copytool项目行为的 */
+    struct hsm_action_item {
+        __u32      hai_len;     /* 结构的合理大小 */
+        __u32      hai_action;  /* 用已知的大小构建的copytool行为 */
+        struct lu_fid hai_fid;     /* 需要去操控的Lustre文件标识符 */
+        struct lu_fid hai_dfid;    /* 用于获取数据的文件标识符*/
+        struct hsm_extent hai_extent;  /* 需要操控的字节范围 */
+        __u64      hai_cookie;  /* 协调器的行为cookie */
+        __u64      hai_gid;     /* 组锁ID */
+        char       hai_data[0]; /* 可变长度 */
+    } __attribute__((packed));
+\end{lstlisting}
+
+\begin{lstlisting}[language={c++},numbers=left]
+    // 若是以下两个条件不满足，则报错
+    if (hcp->magic != CP_PRIV_MAGIC)
+        return -EINVAL;
+    if (hai->hai_action != HSMA_RESTORE && hai->hai_action != HSMA_ARCHIVE)
+        return -EINVAL;
+    // 上面创建的copytool项目行为的dfid, 就是待返回的dfid
+    *fid = hai->hai_dfid;
+\end{lstlisting}
+
+\newpage
+\subsection{获取文件描述符}
+具体API如下：
+\begin{lstlisting}[language={c++},numbers=left]
+    /*
+    此API的目的是获取文件描述符用于复制数据
+    该文件描述符是通过传入的copyaction指针返回
+    返回0如果操作成功，返回负的错误码如果操作失败
+    */
+    int llapi_hsm_action_get_fd(const struct hsm_copyaction_private *hcp);
+\end{lstlisting}
+
+该API会创建一个HSM活动项目：
+\begin{lstlisting}[language={c++},numbers=left]
+    /* 该结构是为了描述copytool项目行为的 */
+    struct hsm_action_item {
+        __u32      hai_len;     /* 结构的合理大小 */
+        __u32      hai_action;  /* 用已知的大小构建的copytool行为 */
+        struct lu_fid hai_fid;     /* 需要去操控的Lustre文件标识符 */
+        struct lu_fid hai_dfid;    /* 用于获取数据的文件标识符*/
+        struct hsm_extent hai_extent;  /* 需要操控的字节范围 */
+        __u64      hai_cookie;  /* 协调器的行为cookie */
+        __u64      hai_gid;     /* 组锁ID */
+        char       hai_data[0]; /* 可变长度 */
+    } __attribute__((packed));
+\end{lstlisting}
+
+\begin{lstlisting}[language={c++},numbers=left]
+    // 如果magic不对，报错
+	if (hcp->magic != CP_PRIV_MAGIC)
+		return -EINVAL;
+    // 如果活动为Archive或Restore并且fd<0，则报错
+	if (hai->hai_action == HSMA_ARCHIVE) {
+		fd = dup(hcp->source_fd);
+		return fd < 0 ? -errno : fd;
+	} else if (hai->hai_action == HSMA_RESTORE) {
+		fd = dup(hcp->data_fd);
+		return fd < 0 ? -errno : fd;
+	} else {
+		return -EINVAL;
+	}
+\end{lstlisting}
+
+\subsection{引入已存在的HSM归档文件}
+具体API如下：
+\begin{lstlisting}[language={c++},numbers=left]
+int llapi_hsm_import(
+    const char *dst,    // dst指向Lustre目的地路径
+    int archive,        // archive指向档案数
+    const struct stat *st, // st包含文件所属关系，置换等
+    // stripe:条目选项，当前默认忽视。
+    unsigned long long stripe_size, 
+    int stripe_offset,
+    int stripe_count, 
+    int stripe_pattern, 
+    char *pool_name,
+    struct lu_fid *newfid   // newfid: 输入新的Lustre文件的fid，作为输出
+);
+\end{lstlisting}
+调用完此API后，调用者必须用获得的新文件标识符去获取文件

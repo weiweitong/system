@@ -1,0 +1,27 @@
+\subsection{HSM日志报错}
+
+\begin{lstlisting}[language={c++},numbers=left]
+    /* 此API的目的是通过文件标识符fd设置HSM状态
+    当一段监控FIFO队列被注册后，自定义的日志回调被调用。
+    将日志条目格式化成Json事件格式，这样可以被copytool监控进程所消费。*/
+    void llapi_hsm_log_error(enum llapi_message_level level, int _rc, const char *fmt, va_list args);
+\end{lstlisting}
+此API的输入为：
+\begin{lstlisting}[language={c++},numbers=left]
+    // enum的llapi_message_level有几种值
+    enum llapi_message_level {
+        LLAPI_MSG_OFF    = 0,   // OFF状态位为0
+        LLAPI_MSG_FATAL  = 1,   // FATAL状态位为1
+        LLAPI_MSG_ERROR  = 2,   // ERROR状态位为2
+        LLAPI_MSG_WARN   = 3,   // WSRN状态位为3
+        LLAPI_MSG_NORMAL = 4,   // NORMAL状态位为4
+        LLAPI_MSG_INFO   = 5,   // INFO状态位为5
+        LLAPI_MSG_DEBUG  = 6,   // DEBUG状态位为6
+        LLAPI_MSG_MAX
+    };
+
+    int _rc // rc设置返回消息的代码
+    const char *fmt  // fmt格式化字符串
+    va_list args  // args待格式化的字符串
+\end{lstlisting}
+
