@@ -137,3 +137,14 @@ from orders;
 ```
 
 
+# 5. Mysql user operation
+
+```sql
+# get into mysql
+mysql -u root -p
+
+# create user and set its password
+create user 
+
+```
+

@@ -70,9 +70,57 @@ df -h
 du -sh
 du /etc/ -sh
 
-# 
+# get the total memory
+grep MemTotal /proc/meminfo
+cat /proc/meminfo |grep MemTotal
 
+# get the available memory
+grep MemFree /proc/meminfo
+cat /proc/meminfo |grep MemFree
 
+# check the running time, user count, load
+uptime
+
+12:16:29 up 51 days, 18:31,  1 user,  load average: 0.00, 0.01, 0.05
+
+# check the system load and partition
+cat /proc/loadavg
+
+# check the mount partition
+mount | column -t
+
+# check all the partition
+fdisk -l
+
+# check all the swap disk 
+swapon -s
+
+# check the disk parameters
+hdparm -i /dev/hda
+
+# check the IDE device
+dmesg |grep IDE
+
+# check the attributes of the net API
+ifconfig
+
+# check the setting of the firewall
+iptables -L
+
+# check the route table
+route -n
+
+# check all the listen port
+netstat -lntp
+
+# check all the established connection
+netstat -antp
+
+# check all the network information process
+netstat -s
+
+# check all the process
+ps -ef
 
 ```
 
