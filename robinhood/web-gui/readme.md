@@ -106,15 +106,20 @@ select column_name
 
 ### 2.4.3. 函数名为: build_filter($args, $filter, $self='$SELF')
 
-从REST传入参数中创建SQL请求, 返回sql请求数组和过滤器数组
+REST传入args参数为key/value数组, self为只展示用户信息,
+
+遍历输入的filter过滤器, 调用上面的get_filter_from_list函数. 
+
+如果filter其中的过滤器存在于args参数中, 如min, max, where, having等, 就加入过滤器数组.
+
+该函数创建SQL请求, 返回sql请求数组和过滤器数组.
+
+
+
 
 ### 2.4.4. 函数名为: build_advanced_filter($args, $access = '$SELF', $table, $join = false)
 
-从REST传入参数中创建SQL请求,  但是有用户限制与权限表.
-
-并且可以实现左联另一个表
-
-返回sql请求数组和过滤器数组
+从REST传入参数中创建SQL请求,  但是有用户限制与权限表, 并且可以实现左联另一个表, 参考上面build_filter中的实现, 返回sql请求数组和过滤器数组
 
 该函数实现的查询语句主体如下:
 
@@ -126,51 +131,28 @@ SELECT column_name,column_type,table_name
 
 根据不同的Rest语句, 可以实现的操作有:
 
+count 统计出现次数  max 最大值  min 最小值
 
-count 统计出现次数
+avg 平均值  sum 统计总数    concat  连接
 
-max 最大值
+remove  移除    filter  过滤    nfilter 反向过滤
 
-min 最小值
+equal   相等    less    小于    bigger  大于
 
-avg 平均值
+soundslike 类似 asc 升序排列    desc 将序排列
 
-sum 统计总数
-
-concat  连接
-
-remove  移除
-
-filter  过滤
-
-nfilter 反向过滤
-
-equal   相等
-
-less    小于
-
-bigger  大于
-
-soundslike 类似
-
-asc 升序排列
-
-desc 将序排列
-
-Left Join   左联另一个表
-
-group by    以某一列分组
-
-limit       限制显示
+Left Join 左联另一个表    group by 以某一列分组    limit 输出范围限制
 
 ```
 
 
 # 3. 审计页面交互
 
-根据请求的不同, 审计页面有几种交互方式:
+根据请求的不同, 审计页面有五种交互方式.
 
-## 3.1. vars请求
+原生数据展示, 图形展示, 输出json都用这五种交互方式向数据库服务器发送sql请求:
+
+## 3.1. 变量请求
 
 根据传入的VARS变量, 直接使用下列语句查询当前数据库:
 
@@ -178,9 +160,11 @@ limit       限制显示
 SELECT * from VARS;
 ```
 
-## 3.2. acct请求
+## 3.2. acct表请求
 
-调用build_advanced_filter函数, 查看当前请求能否通过ACCT_STAT表构成的高级SQL过滤器, 可以防止SQL注入.
+调用build_advanced_filter函数, 查看当前请求能否通过***ACCT_STAT表***构成的高级SQL过滤器, 可以防止SQL注入.
+
+只有存在与ACCT_STAT表中的数据, 才可以得到展示
 
 ## 3.3. files请求
 
@@ -188,14 +172,82 @@ SELECT * from VARS;
 
 ## 3.4. entries请求
 
-调用build_advanced_filter函数, 查看当前请求能否通过ENTRIES表构成的高级SQL过滤器, 可以防止SQL注入.
+调用build_advanced_filter函数, 查看当前请求能否通过***ENTRIES表***构成的高级SQL过滤器, 可以防止SQL注入.
 
 
 ## 3.5. names请求
 
-调用build_advanced_filter函数, 查看当前请求能否通过NAMES表构成的高级SQL过滤器, 可以防止SQL注入.
+调用build_advanced_filter函数, 查看当前请求能否通过***NAMES表***构成的高级SQL过滤器, 可以防止SQL注入.
 
 
-# 4. 页面图像模块
+# 4. 页面图形展示
+
+根据请求的不同, 页面展示图形有如下的不同:
+
+## 4.1. 用户名请求
+
+无展示, 页面为空
+
+## 4.2. 组名请求
+
+以组名请求中的参数, 调用build_filter构建sql过滤器, 有用户名, 组名, 最大大小, 最小大小, 共四个过滤器.
+
+通过过滤器的请求, 会调用如下的sql语句:
+
+```sql
+SELECT $content_requested, 
+    SUM(size) AS ssize, 
+    SUM(count) AS scount 
+    FROM ACCT_STAT $sqlfilter 
+    GROUP BY $content_requested $havingfilter;
+```
+
+## 4.3. Sizes请求
+
+以Sizes请求中的参数args, 调用build_filter构建sql过滤器, 有用户名, 组名两个过滤器.
+
+通过过滤器的请求,会将大小分为空文件, 1Byte, 32B, 1KB, 32KB, 1MB, 32KB, 1GB, 32GB, 1TB 等10个类别.
+
+```sql
+SELECT $select_str FROM ACCT_STAT $sqlfilter;
+```
+
+然后将数据库中的文件, 以大小分类到该十类下, 展示出该图形.
+
+## 4.4. Files请求
+
+以Files请求中的参数args, 调用build_filter构建sql过滤器, 有文件名, 用户名, 组名, 偏移量, 最大大小, 最小大小, 共六个过滤器.
+
+通过过滤器的请求, 会调用以下的sql语句, 
+
+```sql
+SELECT uid, gid, size, blocks, name, type, creation_time, last_access, last_mod "."
+    FROM ENTRIES 
+    LEFT JOIN NAMES 
+    ON ENTRIES.id = NAMES.id $sqlfilter 
+    LIMIT $MAX_ROWS OFFSET $offset;
+```
+
+得出的文件元数据, 以图形的形式展示出来.
+
+
+## 4.5. 默认请求
+
+不满足上述的四种请求的, 以参数args, 调用build_filter构建sql过滤器, 有文件名, 用户名, 组名, 共三种过滤器.
+
+通过过滤器的请求, 调用以下的sql语句:
+
+```sql
+SELECT $content_requested AS sstatus, 
+    SUM(size) AS ssize, 
+    SUM(count) AS scount 
+    FROM ACCT_STAT $sqlfilter 
+    GROUP BY $content_requested;
+```
+
+得出的文件元数据, 以图形的形式展示出来.
+
+
+
 
 
