@@ -126,8 +126,39 @@ ps -ef
 
 # 2. search for file
 
+
 ```bash 
 # find a file in 
 find / -name "name"
 
 ```
+
+
+
+# 3. 删除侧边栏
+
+修改个人目录 ~/.config 下的 user-dirs.dirs 文件，将你不想要的都注释掉或者删除：
+
+简单来说就是修改个人目录 ~/.config 下的 user-dirs.dirs 文件，将你不想要的都注释掉或者删除：
+
+# This file is written by xdg-user-dirs-update
+# If you want to change or add directories, just edit the line you're
+# interested in. All local changes will be retained on the next run
+# Format is XDG_xxx_DIR="$HOME/yyy", where yyy is a shell-escaped
+# homedir-relative path, or XDG_xxx_DIR="/yyy", where /yyy is an
+# absolute path. No other format is supported.
+#
+XDG_DESKTOP_DIR="$HOME/桌面"
+XDG_DOWNLOAD_DIR="$HOME/下载"
+#XDG_TEMPLATES_DIR="$HOME/模板"
+#XDG_PUBLICSHARE_DIR="$HOME/公共的"
+#XDG_DOCUMENTS_DIR="$HOME/文档"
+#XDG_MUSIC_DIR="$HOME/音乐"
+#XDG_PICTURES_DIR="$HOME/图片"
+#XDG_VIDEOS_DIR="$HOME/视频"
+
+再创建一个文件：
+echo "enabled=false" > ~/.config/user-dirs.conf
+
+重启看看，是不是清爽了。
+
