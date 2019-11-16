@@ -98,3 +98,5 @@ func Processor(seq chan int, wait chan struct{}) {
 ```
 
 
+# Conda
+conda config --set auto_activate_base false
