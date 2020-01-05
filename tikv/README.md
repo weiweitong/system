@@ -205,4 +205,8 @@ TiDB满足以下所有的技术要求：
 
 在真实数据场景下，非常稳定，高频低频两种查询也都满足需求，定向优化后 TiDB 的 SQL性能 比 MySQL 性能提高四倍。
 
+## 8 三节点tikv集群性能小测
 
+ 在一个三节点的tikv集群中，使用相关profiling工具研究tikv可能的性能瓶颈，主要用于测试raw kv insert性能。在三节点的tikv集群上，线程数有194个，远远超过逻辑CPU个数48个。这个线程数是否能够平衡上下文切换与lock connection带来的负面影响，需要考虑。gRPC和transport stats是CPU资源占有资源最多的。
+
+gRPC延时在23ms，总共200G，每个tikv实例承担了65G，
